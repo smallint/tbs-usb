@@ -837,6 +837,7 @@ static void cx231xx_isoc_irq_callback_ts2(struct urb *urb)
 	struct cx231xx_video_mode *vmode =
 	    container_of(dma_q, struct cx231xx_video_mode, vidq);
 	struct cx231xx *dev = container_of(vmode, struct cx231xx, ts2_mode);
+	unsigned long flags;
 	int i;
 
 	switch (urb->status) {
@@ -853,16 +854,15 @@ static void cx231xx_isoc_irq_callback_ts2(struct urb *urb)
 	}
 
 	/* Copy data from URB */
-	spin_lock(&dev->ts2_mode.slock);
+	spin_lock_irqsave(&dev->ts2_mode.slock, flags);
 	dev->ts2_mode.isoc_ctl.isoc_copy(dev, urb);
-	spin_unlock(&dev->ts2_mode.slock);
+	spin_unlock_irqrestore(&dev->ts2_mode.slock, flags);
 
 	/* Reset urb buffers */
 	for (i = 0; i < urb->number_of_packets; i++) {
 		urb->iso_frame_desc[i].status = 0;
 		urb->iso_frame_desc[i].actual_length = 0;
 	}
-	urb->status = 0;
 
 	urb->status = usb_submit_urb(urb, GFP_ATOMIC);
 	if (urb->status) {
@@ -921,6 +921,7 @@ static void cx231xx_bulk_irq_callback_ts2(struct urb *urb)
 	struct cx231xx_video_mode *vmode =
 	    container_of(dma_q, struct cx231xx_video_mode, vidq);
 	struct cx231xx *dev = container_of(vmode, struct cx231xx, ts2_mode);
+	unsigned long flags;
 
 	switch (urb->status) {
 	case 0:		/* success */
@@ -930,18 +931,18 @@ static void cx231xx_bulk_irq_callback_ts2(struct urb *urb)
 	case -ENOENT:
 	case -ESHUTDOWN:
 		return;
+	case -EPIPE:		/* stall */
+		cx231xx_isocdbg("urb completion error - device is stalled.\n");
+		return;
 	default:		/* error */
-		cx231xx_isocdbg("urb completition error %d.\n", urb->status);
+		cx231xx_isocdbg("urb completion error %d.\n", urb->status);
 		break;
 	}
 
 	/* Copy data from URB */
-	spin_lock(&dev->ts2_mode.slock);
+	spin_lock_irqsave(&dev->ts2_mode.slock, flags);
 	dev->ts2_mode.bulk_ctl.bulk_copy(dev, urb);
-	spin_unlock(&dev->ts2_mode.slock);
-
-	/* Reset urb buffers */
-	urb->status = 0;
+	spin_unlock_irqrestore(&dev->ts2_mode.slock, flags);
 
 	urb->status = usb_submit_urb(urb, GFP_ATOMIC);
 	if (urb->status) {
@@ -1014,6 +1015,7 @@ void cx231xx_uninit_isoc_ts2(struct cx231xx *dev)
 	struct cx231xx_dmaqueue *dma_q_ts2 = &dev->ts2_mode.vidq;
 	struct urb *urb;
 	int i;
+	bool broken_pipe = false;
 
 	cx231xx_isocdbg("cx231xx: called cx231xx_uninit_isoc_ts2\n");
 
@@ -1033,12 +1035,19 @@ void cx231xx_uninit_isoc_ts2(struct cx231xx *dev)
 						  transfer_buffer[i],
 						  urb->transfer_dma);
 			}
+			if (urb->status == -EPIPE) {
+				broken_pipe = true;
+			}
 			usb_free_urb(urb);
 			dev->ts2_mode.isoc_ctl.urb[i] = NULL;
 		}
 		dev->ts2_mode.isoc_ctl.transfer_buffer[i] = NULL;
 	}
 
+	if (broken_pipe) {
+		cx231xx_isocdbg("Reset endpoint to recover broken pipe.");
+		usb_reset_endpoint(dev->udev, dev->ts2_mode.end_point_addr);
+	}
 	kfree(dev->ts2_mode.isoc_ctl.urb);
 	kfree(dev->ts2_mode.isoc_ctl.transfer_buffer);
 	kfree(dma_q_ts2->p_left_data);
@@ -1121,6 +1130,7 @@ void cx231xx_uninit_bulk_ts2(struct cx231xx *dev)
 	struct urb *urb;
 	int i;
 	struct cx231xx_dmaqueue *dma_q_ts2 = &dev->ts2_mode.vidq;
+	bool broken_pipe = false;
 
 	cx231xx_isocdbg("cx231xx: called cx231xx_uninit_bulk_ts2\n");
 
@@ -1140,12 +1150,19 @@ void cx231xx_uninit_bulk_ts2(struct cx231xx *dev)
 						transfer_buffer[i],
 						urb->transfer_dma);
 			}
+			if (urb->status == -EPIPE) {
+				broken_pipe = true;
+			}
 			usb_free_urb(urb);
 			dev->ts2_mode.bulk_ctl.urb[i] = NULL;
 		}
 		dev->ts2_mode.bulk_ctl.transfer_buffer[i] = NULL;
 	}
 
+	if (broken_pipe) {
+		cx231xx_isocdbg("Reset endpoint to recover broken pipe.");
+		usb_reset_endpoint(dev->udev, dev->ts2_mode.end_point_addr);
+	}
 	kfree(dev->ts2_mode.bulk_ctl.urb);
 	kfree(dev->ts2_mode.bulk_ctl.transfer_buffer);
 	kfree(dma_q_ts2->p_left_data);
@@ -1399,7 +1416,7 @@ int cx231xx_init_isoc_ts2(struct cx231xx *dev, int max_packets,
 				 sb_size, cx231xx_isoc_irq_callback_ts2, dma_q_ts2, 1);
 
 		urb->number_of_packets = max_packets;
-		urb->transfer_flags = URB_ISO_ASAP;
+		urb->transfer_flags = URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP;
 
 		k = 0;
 		for (j = 0; j < max_packets; j++) {
@@ -1644,7 +1661,7 @@ int cx231xx_init_bulk_ts2(struct cx231xx *dev, int max_packets,
 			return -ENOMEM;
 		}
 		dev->ts2_mode.bulk_ctl.urb[i] = urb;
-		urb->transfer_flags = 0;
+		urb->transfer_flags = URB_NO_TRANSFER_DMA_MAP;
 
 		dev->ts2_mode.bulk_ctl.transfer_buffer[i] =
 		    usb_alloc_coherent(dev->udev, sb_size, GFP_KERNEL,
