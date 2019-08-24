@@ -29,6 +29,7 @@
 #include <linux/mm.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #include <media/v4l2-common.h>
 #include <media/v4l2-ioctl.h>
@@ -528,7 +529,11 @@ static inline void vbi_buffer_filled(struct cx231xx *dev,
 
 	buf->vb.state = VIDEOBUF_DONE;
 	buf->vb.field_count++;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+	buf->vb.ts = ktime_get_ns();
+#else
 	v4l2_get_timestamp(&buf->vb.ts);
+#endif
 
 	dev->vbi_mode.bulk_ctl.buf = NULL;
 

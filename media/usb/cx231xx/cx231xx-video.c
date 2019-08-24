@@ -32,6 +32,7 @@
 #include <linux/mm.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #include <media/v4l2-common.h>
 #include <media/v4l2-ioctl.h>
@@ -182,7 +183,11 @@ static inline void buffer_filled(struct cx231xx *dev,
 	cx231xx_isocdbg("[%p/%d] wakeup\n", buf, buf->vb.i);
 	buf->vb.state = VIDEOBUF_DONE;
 	buf->vb.field_count++;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+	buf->vb.ts = ktime_get_ns();
+#else
 	v4l2_get_timestamp(&buf->vb.ts);
+#endif
 
 	if (dev->USE_ISO)
 		dev->video_mode.isoc_ctl.buf = NULL;
@@ -1482,6 +1487,46 @@ int cx231xx_s_register(struct file *file, void *priv,
 }
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+static int vidioc_g_pixelaspect(struct file *file, void *priv,
+				int type, struct v4l2_fract *f)
+{
+	struct cx231xx_fh *fh = priv;
+	struct cx231xx *dev = fh->dev;
+	bool is_50hz = dev->norm & V4L2_STD_625_50;
+
+	if (type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
+	f->numerator = is_50hz ? 54 : 11;
+	f->denominator = is_50hz ? 59 : 10;
+
+	return 0;
+}
+
+static int vidioc_g_selection(struct file *file, void *priv,
+			      struct v4l2_selection *s)
+{
+	struct cx231xx_fh *fh = priv;
+	struct cx231xx *dev = fh->dev;
+
+	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
+	switch (s->target) {
+	case V4L2_SEL_TGT_CROP_BOUNDS:
+	case V4L2_SEL_TGT_CROP_DEFAULT:
+		s->r.left = 0;
+		s->r.top = 0;
+		s->r.width = dev->width;
+		s->r.height = dev->height;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+#else
 static int vidioc_cropcap(struct file *file, void *priv,
 			  struct v4l2_cropcap *cc)
 {
@@ -1503,6 +1548,7 @@ static int vidioc_cropcap(struct file *file, void *priv,
 	return 0;
 }
 
+#endif
 static int vidioc_streamon(struct file *file, void *priv,
 			   enum v4l2_buf_type type)
 {
@@ -2093,7 +2139,12 @@ static const struct v4l2_ioctl_ops video_ioctl_ops = {
 	.vidioc_g_fmt_vbi_cap          = vidioc_g_fmt_vbi_cap,
 	.vidioc_try_fmt_vbi_cap        = vidioc_try_fmt_vbi_cap,
 	.vidioc_s_fmt_vbi_cap          = vidioc_s_fmt_vbi_cap,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+	.vidioc_g_pixelaspect          = vidioc_g_pixelaspect,
+	.vidioc_g_selection            = vidioc_g_selection,
+#else
 	.vidioc_cropcap                = vidioc_cropcap,
+#endif
 	.vidioc_reqbufs                = vidioc_reqbufs,
 	.vidioc_querybuf               = vidioc_querybuf,
 	.vidioc_qbuf                   = vidioc_qbuf,
@@ -2203,11 +2254,19 @@ int cx231xx_register_analog_devices(struct cx231xx *dev)
 	v4l2_ctrl_handler_init(&dev->radio_ctrl_handler, 5);
 
 	if (dev->sd_cx25840) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+		v4l2_ctrl_add_handler(&dev->ctrl_handler,
+				dev->sd_cx25840->ctrl_handler, NULL, true);
+		v4l2_ctrl_add_handler(&dev->radio_ctrl_handler,
+				dev->sd_cx25840->ctrl_handler,
+				v4l2_ctrl_radio_filter, true);
+#else
 		v4l2_ctrl_add_handler(&dev->ctrl_handler,
 				dev->sd_cx25840->ctrl_handler, NULL);
 		v4l2_ctrl_add_handler(&dev->radio_ctrl_handler,
 				dev->sd_cx25840->ctrl_handler,
 				v4l2_ctrl_radio_filter);
+#endif
 	}
 
 	if (dev->ctrl_handler.error)
