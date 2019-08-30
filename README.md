@@ -4,16 +4,28 @@ These are out-of-tree modules and do not require a full v4l media tree.
 Only required modules are built to add support for TBS cards in the cx231xx
 module. This is only tested with ArchLinux (kernel 4.19 and 5.2).
 
-Reason for not using the full media build from tbstv are:
+Reasons for not using the full media build from tbsdtv are:
 
 * The second adapter never worked on my Raspberry Pi4
-* It prevented loading some Pi4 specific modules
+* It prevents loading some Pi4 specific modules
 * It takes too long to build after a kernel upgrade
 
-So far no issues have been detected. My TBS 5990 runs with both adapters
-for quite some time now.
+There is still one issue to be resolved but that is independent of the TBS source:
+USB bulk transfer of the cx231xx module causes a stalled device on the Raspberry
+Pi4 kernel and it must be used with ISO transfer.
+
+```
+[/etc/modprobe.d/cx231xx.conf]
+options cx231xx transfer_mode=1
+```
+
+That does not happen with an x86 kernel.
+
+Except the general USB bulk transfer issue no further problems have been detected.
+My TBS 5990 runs with both adapters for quite some time now.
 
 This repository is heavily inspired by https://github.com/AlexanderS/tbsecp3-driver.
+The upstream driver sources are located at https://github.com/tbsdtv/linux_media.
 
 ## Contents
 
