@@ -12,10 +12,6 @@ av201x-objs := tuners/av201x.o
 ccflags-y += -DCONFIG_MEDIA_TUNER_AV201X
 obj-m += av201x.o
 
-cx2341x-objs := media/common/cx2341x.o
-ccflags-y += -DCONFIG_VIDEO_CX2341X
-obj-m += cx2341x.o
-
 cx231xx-objs := media/usb/cx231xx/cx231xx-417.o \
                 media/usb/cx231xx/cx231xx-avcore.o \
                 media/usb/cx231xx/cx231xx-i2c.o \
