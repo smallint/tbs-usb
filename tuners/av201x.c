@@ -24,31 +24,6 @@
 /* write multiple (continuous) registers */
 static int av201x_wrm(struct av201x_priv *priv, u8 *buf, int len)
 {
-	int ret, i;
-	u8 sbuf[] = { buf[0], buf[1] };
-	struct i2c_msg msg = {
-		.addr = priv->cfg->i2c_address,
-		.flags = 0, .buf = sbuf, .len = 2 };
-
-	dev_dbg(&priv->i2c->dev, "%s() i2c wrm @0x%02x (len=%d) ",
-		__func__, buf[0], len);
-
-	for (i = 1; i < len; ++i ) {
-		ret = i2c_transfer(priv->i2c, &msg, 1);
-		if (ret < 0) {
-			dev_warn(&priv->i2c->dev,
-				"%s: i2c wrm err(%i) @0x%02x (len=%d)\n",
-				KBUILD_MODNAME, ret, buf[0], len);
-			return ret;
-		}
-		++sbuf[0];
-		sbuf[1] = buf[i+1];
-	}
-	return 0;
-}
-/*
-static int av201x_wrm(struct av201x_priv *priv, u8 *buf, int len)
-{
 	int ret;
 	struct i2c_msg msg = {
 		.addr = priv->cfg->i2c_address,
@@ -66,7 +41,6 @@ static int av201x_wrm(struct av201x_priv *priv, u8 *buf, int len)
 	}
 	return 0;
 }
-*/
 
 /* write one register */
 static int av201x_wr(struct av201x_priv *priv, u8 addr, u8 data)
