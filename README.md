@@ -1,7 +1,7 @@
 # TBS USB drivers
 
 These are out-of-tree modules and do not require a full v4l media tree.
-Only required modules are built add support for TBS cards in the cx231xx
+Only required modules are built to add support for TBS cards in the cx231xx
 module. This is only tested with ArchLinux (kernel 4.19 and 5.2).
 
 Reason for not using the full media build from tbstv are:
