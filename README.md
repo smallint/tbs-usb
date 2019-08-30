@@ -13,6 +13,8 @@ Reason for not using the full media build from tbstv are:
 So far no issues have been detected. My TBS 5990 runs with both adapters
 for quite some time now.
 
+This repository is heavily inspired by https://github.com/AlexanderS/tbsecp3-driver.
+
 ## Contents
 
 This repos contains the following modules:
@@ -21,7 +23,6 @@ This repos contains the following modules:
 * tas2101
 * cx231xx_dvb_ci
 * cx231xx
-* cx2341x (this can be removed probably)
 
 ## Modification
 
@@ -66,3 +67,8 @@ To install them into a different directory, use:
 ```
 make KDIR=/lib/modules/4.18.12-arch1-1-ARCH/build INSTALL_MOD_DIR=updates/tbsusb modules_install
 ```
+
+## TODO
+
+* ArchLinux dkms package
+
