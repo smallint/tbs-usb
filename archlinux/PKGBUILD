@@ -2,7 +2,7 @@
 
 _pkgbase=tbs-usb
 pkgname=${_pkgbase}-dkms
-pkgver=r20190901.225454.e97fe9a
+pkgver=r20190921.202120.8c75da8
 pkgrel=1
 pkgdesc="TBS linux open source standalone USB drivers (DKMS)"
 arch=('i686' 'x86_64' 'armv7h')
@@ -11,9 +11,9 @@ license=('GPL2')
 makedepends=('git')
 depends=('dkms')
 conflicts=("${_pkgbase}")
-source=('dkms.conf')
+source=('dkms.conf'
         "git+${url}.git")
-sha256sums=('d8780388b69b4b21974ff998795713e9fa0eec9140f56959d1ec0afc6c4252b2')
+sha256sums=('d8780388b69b4b21974ff998795713e9fa0eec9140f56959d1ec0afc6c4252b2'
             'SKIP')
 
 pkgver() {
