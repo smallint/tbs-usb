@@ -1,0 +1,36 @@
+# Maintainer: smallint <tahoma(at)gmx(dot)de>
+
+_pkgbase=tbs-usb
+pkgname=${_pkgbase}-dkms
+pkgver=r20190921.202120.8c75da8
+pkgrel=1
+pkgdesc="TBS linux open source standalone USB drivers (DKMS)"
+arch=('i686' 'x86_64' 'armv7h')
+url="https://github.com/smallint/tbs-usb"
+license=('GPL2')
+makedepends=('git')
+depends=('dkms')
+conflicts=("${_pkgbase}")
+source=('dkms.conf'
+        "git+${url}.git")
+sha256sums=('d8780388b69b4b21974ff998795713e9fa0eec9140f56959d1ec0afc6c4252b2'
+            'SKIP')
+
+pkgver() {
+    cd "$srcdir/tbs-usb"
+    printf "r%s.%s" "$(git show -s --date=format:'%Y%m%d.%H%M%S' --format=%cd)" "$(git rev-parse --short HEAD)"
+}
+
+package() {
+    # Copy dkms.conf
+    install -Dm644 "${srcdir}/dkms.conf" "${pkgdir}/usr/src/${_pkgbase}-${pkgver}/dkms.conf"
+
+    # Set name and version
+    sed -e "s/@_PKGBASE@/${_pkgbase}/" \
+        -e "s/@PKGVER@/${pkgver}/" \
+        -i "${pkgdir}/usr/src/${_pkgbase}-${pkgver}/dkms.conf"
+
+    # Copy sources
+    mkdir -p "${pkgdir}/usr/src/${_pkgbase}-${pkgver}/"
+    cp -r "${srcdir}/tbs-usb"/* "${pkgdir}/usr/src/${_pkgbase}-${pkgver}/"
+}
