@@ -85,8 +85,3 @@ make KDIR=/lib/modules/4.18.12-arch1-1-ARCH/build INSTALL_MOD_DIR=updates/tbsusb
 A TBS 5990 connected to a RPi4 prevents it from powering up or rebooting due to backpowering of the
 USB port (I guess). A simple fix is to disable PIN1 (+5V) of the USB cable. I did it with a small
 strip of hockey tape which I put on PIN1 (upper left) of the socket connected with the TBS 5990.
-
-## TODO
-
-* ArchLinux dkms package
-
