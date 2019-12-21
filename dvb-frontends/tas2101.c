@@ -848,7 +848,11 @@ static int tas2101_tune(struct dvb_frontend *fe, bool re_tune,
 	return tas2101_read_status(fe, status);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+static enum dvbfe_algo tas2101_get_algo(struct dvb_frontend *fe)
+#else
 static int tas2101_get_algo(struct dvb_frontend *fe)
+#endif
 {
 	return DVBFE_ALGO_HW;
 }
