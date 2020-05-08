@@ -1,7 +1,12 @@
 *.o
 *.cmd
 *.mod.c
+*.mod
 *.ko
+built-in.a
 Module.symvers
 modules.order
 .tmp_versions
+archlinux/pkg
+archlinux/src
+archlinux/tbs-usb*
