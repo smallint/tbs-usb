@@ -96,7 +96,6 @@ int cx231xx_ir_init(struct cx231xx *dev)
 
 void cx231xx_ir_exit(struct cx231xx *dev)
 {
-	if (dev->ir_i2c_client)
-		i2c_unregister_device(dev->ir_i2c_client);
+	i2c_unregister_device(dev->ir_i2c_client);
 	dev->ir_i2c_client = NULL;
 }
