@@ -88,7 +88,7 @@ int cx231xx_ir_init(struct cx231xx *dev)
 	ir_i2c_bus = cx231xx_boards[dev->model].ir_i2c_master;
 	dev_dbg(dev->dev, "Trying to bind ir at bus %d, addr 0x%02x\n",
 		ir_i2c_bus, info.addr);
-	dev->ir_i2c_client = i2c_new_device(
+	dev->ir_i2c_client = i2c_new_client_device(
 		cx231xx_get_i2c_adap(dev, ir_i2c_bus), &info);
 
 	return 0;
