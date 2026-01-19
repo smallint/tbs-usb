@@ -2,10 +2,10 @@
 
 _pkgbase=tbs-usb
 pkgname=${_pkgbase}-dkms
-pkgver=r20210226.205816.42cb983
+pkgver=r20260119.162629.3d74ddb
 pkgrel=1
 pkgdesc="TBS linux open source standalone USB drivers (DKMS)"
-arch=('i686' 'x86_64' 'armv7h')
+arch=('i686' 'x86_64' 'armv7h' 'aarch64')
 url="https://github.com/smallint/tbs-usb"
 license=('GPL2')
 makedepends=('git')
