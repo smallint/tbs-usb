@@ -2,7 +2,7 @@
 
 _pkgbase=tbs-usb
 pkgname=${_pkgbase}-dkms
-pkgver=r20260119.162629.3d74ddb
+pkgver=r20260119.184609.251d426
 pkgrel=1
 pkgdesc="TBS linux open source standalone USB drivers (DKMS)"
 arch=('i686' 'x86_64' 'armv7h' 'aarch64')
