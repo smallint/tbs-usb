@@ -28,7 +28,7 @@ static int tuner = -1;
 module_param(tuner, int, 0444);
 MODULE_PARM_DESC(tuner, "tuner type");
 
-static int transfer_mode = 0;
+static int transfer_mode = 1;
 module_param(transfer_mode, int, 0444);
 MODULE_PARM_DESC(transfer_mode, "transfer mode (1-ISO or 0-BULK)");
 
@@ -689,8 +689,7 @@ struct cx231xx_board cx231xx_boards[] = {
 			}, {
 				.type = CX231XX_VMUX_SVIDEO,
 				.vmux = CX231XX_VIN_1_1 |
-					(CX231XX_VIN_1_2 << 8) |
-					CX25840_SVIDEO_ON,
+					(CX231XX_VIN_3_2 << 8),
 				.amux = CX231XX_AMUX_LINE_IN,
 				.gpio = NULL,
 			}
@@ -862,14 +861,12 @@ struct cx231xx_board cx231xx_boards[] = {
 			.type = CX231XX_VMUX_COMPOSITE1,
 			.vmux = CX231XX_VIN_2_1,
 			.amux = CX231XX_AMUX_LINE_IN,
-			.gpio = NULL,
 		}, {
 			.type = CX231XX_VMUX_SVIDEO,
 			.vmux = CX231XX_VIN_1_1 |
 				(CX231XX_VIN_1_2 << 8) |
 				CX25840_SVIDEO_ON,
 			.amux = CX231XX_AMUX_LINE_IN,
-			.gpio = NULL,
 		} },
 	},
 	[CX231XX_BOARD_ASTROMETA_T2HYBRID] = {
@@ -1128,10 +1125,11 @@ struct cx231xx_board cx231xx_boards[] = {
 		} },
 	},
 };
-const unsigned int cx231xx_bcount = ARRAY_SIZE(cx231xx_boards);
 
 /* table of devices that work with this driver */
 struct usb_device_id cx231xx_id_table[] = {
+	{USB_DEVICE(0x1D19, 0x6108),
+	.driver_info = CX231XX_BOARD_PV_XCAPTURE_USB},
 	{USB_DEVICE(0x1D19, 0x6109),
 	.driver_info = CX231XX_BOARD_PV_XCAPTURE_USB},
 	{USB_DEVICE(0x0572, 0x5A3C),
@@ -1208,11 +1206,11 @@ struct usb_device_id cx231xx_id_table[] = {
 	{USB_DEVICE(0x15f4, 0x0135),
 	.driver_info = CX231XX_BOARD_ASTROMETA_T2HYBRID},
 	{USB_DEVICE(0x734c, 0x5280),
-	 .driver_info = CX231XX_BOARD_TBS_5280},
+	.driver_info = CX231XX_BOARD_TBS_5280},
 	{USB_DEVICE(0x734c, 0x5281),
-	 .driver_info = CX231XX_BOARD_TBS_5281},
+	.driver_info = CX231XX_BOARD_TBS_5281},
 	{USB_DEVICE(0x734c, 0x5990),
-	 .driver_info = CX231XX_BOARD_TBS_5990},
+	.driver_info = CX231XX_BOARD_TBS_5990},
 	{USB_DEVICE(0x199e, 0x8002),
 	 .driver_info = CX231XX_BOARD_THE_IMAGING_SOURCE_DFG_USB2_PRO},
 	{},
@@ -1669,7 +1667,7 @@ static void request_module_async(struct work_struct *work)
 		request_module("cx231xx-alsa");
 
 	if (dev->board.has_dvb)
-		request_module("cx231xx-dvb-ci");
+		request_module("cx231xx-dvb");
 
 }
 

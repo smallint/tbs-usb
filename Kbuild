@@ -24,7 +24,6 @@ cx231xx-$(CONFIG_VIDEO_CX231XX_RC) += media/usb/cx231xx/cx231xx-input.o
 ccflags-y += -DCONFIG_VIDEO_CX231XX
 obj-m += cx231xx.o
 
-cx231xx_dvb_ci-objs := media/usb/cx231xx/cx231xx-dvb.o \
-                       media/usb/cx231xx/tbscxci.o
+cx231xx_dvb_ci-objs := media/usb/cx231xx/cx231xx-dvb.o
 ccflags-y += -DCONFIG_VIDEO_CX231XX_DVB
 obj-m += cx231xx_dvb_ci.o

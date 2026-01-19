@@ -35,7 +35,6 @@
 #include "cxd2820r.h"
 #include "tas2101.h"
 #include "av201x.h"
-#include "tbscxci.h"
 
 MODULE_DESCRIPTION("driver for cx231xx based DVB cards");
 MODULE_AUTHOR("Srinivasa Deevi <srinivasa.deevi@conexant.com>");
@@ -50,6 +49,29 @@ DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 #define CX231XX_DVB_NUM_BUFS 5
 #define CX231XX_DVB_MAX_PACKETSIZE 564
 #define CX231XX_DVB_MAX_PACKETS 64
+#define CX231XX_DVB_MAX_FRONTENDS 2
+
+struct cx231xx_dvb {
+	struct dvb_frontend *frontend[CX231XX_DVB_MAX_FRONTENDS];
+
+	/* feed count management */
+	struct mutex lock;
+	int nfeeds;
+	u8 count;
+	u8 mac[6];
+
+	/* general boilerplate stuff */
+	struct dvb_adapter adapter;
+	struct dvb_demux demux;
+	struct dmxdev dmxdev;
+	struct dmx_frontend fe_hw;
+	struct dmx_frontend fe_mem;
+	struct dvb_net net;
+	struct i2c_client *i2c_client_demod[CX231XX_DVB_MAX_FRONTENDS];
+	struct i2c_client *i2c_client_tuner;
+
+	void *adap_priv;
+};
 
 static struct s5h1432_config dvico_s5h1432_config = {
 	.output_mode   = S5H1432_SERIAL_OUTPUT,
@@ -133,7 +155,7 @@ static struct tda18271_config pv_tda18271_config = {
 	.small_i2c = TDA18271_03_BYTE_CHUNK_INIT,
 };
 
-static struct lgdt3306a_config hauppauge_955q_lgdt3306a_config = {
+static const struct lgdt3306a_config hauppauge_955q_lgdt3306a_config = {
 	.qam_if_khz         = 4000,
 	.vsb_if_khz         = 3250,
 	.spectral_inversion = 1,
@@ -365,16 +387,10 @@ static int start_streaming(struct cx231xx_dvb *dvb)
 
 	if (dev->USE_ISO) {
 		dev_dbg(dev->dev, "DVB transfer mode is ISO.\n");
-
-		mutex_lock(&dev->i2c_lock);
-		cx231xx_enable_i2c_port_3(dev, false);
 		if (dvb->count == 1)
 			cx231xx_set_alt_setting(dev, INDEX_TS2, 5);
 		else
 			cx231xx_set_alt_setting(dev, INDEX_TS1, 5);
-		cx231xx_enable_i2c_port_3(dev, true);
-		mutex_unlock(&dev->i2c_lock);
-
 		rc = cx231xx_set_mode(dev, CX231XX_DIGITAL_MODE);
 		if (rc < 0)
 			return rc;
@@ -529,7 +545,7 @@ static int attach_xc5000(u8 addr, struct cx231xx *dev)
 
 int cx231xx_set_analog_freq(struct cx231xx *dev, u32 freq)
 {
-	if ((dev->dvb[0] != NULL) && (dev->dvb[0]->frontend[0] != NULL)) {
+	if (dev->dvb[0] && dev->dvb[0]->frontend[0]) {
 
 		struct dvb_tuner_ops *dops = &dev->dvb[0]->frontend[0]->ops.tuner_ops;
 
@@ -544,6 +560,7 @@ int cx231xx_set_analog_freq(struct cx231xx *dev, u32 freq)
 			/* Set the analog parameters to set the frequency */
 			dops->set_analog_params(dev->dvb[0]->frontend[0], &params);
 		}
+
 	}
 
 	return 0;
@@ -553,7 +570,7 @@ int cx231xx_reset_analog_tuner(struct cx231xx *dev)
 {
 	int status = 0;
 
-	if ((dev->dvb[0] != NULL) && (dev->dvb[0]->frontend[0] != NULL)) {
+	if (dev->dvb[0] && dev->dvb[0]->frontend[0]) {
 
 		struct dvb_tuner_ops *dops = &dev->dvb[0]->frontend[0]->ops.tuner_ops;
 
@@ -572,6 +589,7 @@ int cx231xx_reset_analog_tuner(struct cx231xx *dev)
 					"XC5000 firmware download failed !!!\n");
 			}
 		}
+
 	}
 
 	return status;
@@ -628,13 +646,6 @@ static int register_dvb(struct cx231xx_dvb *dvb,
 
 		/* MFE lock */
 		dvb->adapter.mfe_shared = 1;
-	}
-
-	/* post init frontend */
-	switch (dev->model) {
-	case CX231XX_BOARD_TBS_5990:
-		tbscxci_init(dvb, dvb->count);
-		break;
 	}
 
 	/* register demux stuff */
@@ -1450,12 +1461,6 @@ static int dvb_fini(struct cx231xx *dev)
 
 	for (i = 0; i < dev->board.adap_cnt; i++) {
 		if (dev->dvb[i]) {
-			switch (dev->model) {
-				case CX231XX_BOARD_TBS_5990:
-					tbscxci_release(dev->dvb[i]);
-					break;
-			}
-
 			unregister_dvb(dev->dvb[i]);
 			kfree(dev->dvb[i]);
 			dev->dvb[i] = NULL;
